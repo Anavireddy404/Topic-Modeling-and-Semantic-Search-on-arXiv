@@ -1,4 +1,5 @@
-arXiv Topic Modeling with BERTopic - README
+arXiv Topic Modeling with BERTopic
+
 Overview
 This project implements topic modeling on arXiv research paper abstracts using BERTopic. The code processes 100,000 arXiv papers, creates embeddings using BERTopic, and applies clustering techniques like UMAP and HDBScan to identify related papers with interactive visualizations.
 
