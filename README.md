@@ -1,83 +1,107 @@
-arXiv Topic Modeling with BERTopic
+# Arxiv BERT Topic Modelling
 
-Overview
-This project implements topic modeling on arXiv research paper abstracts using BERTopic. The code processes 100,000 arXiv papers, creates embeddings using BERTopic, and applies clustering techniques like UMAP and HDBScan to identify related papers with interactive visualizations.
+### Project Overview
 
-Requirements
+This project applies BERTopic-based topic modelling to paper abstracts from the Cornell University arXiv dataset. It builds a full pipeline — from raw metadata download through embedding, clustering, and topic labelling — to automatically discover and visualize the major research topics present across arXiv's paper abstracts.
 
-Python 3.7+
-Required packages:
-bertopic
-datamapplot
-sentence-transformers
-umap-learn
-hdbscan
-plotly
-openai
-scikit-learn
+### Dataset
+
+The project uses the [Cornell University arXiv dataset](https://www.kaggle.com/datasets/Cornell-University/arxiv) from Kaggle, downloaded directly via the Kaggle API. The full snapshot contains metadata (id, abstract, categories, update date) for roughly **2.8 million papers** spanning **176 unique arXiv subject categories**.
+
+The dataset is downloaded, unzipped, and streamed line-by-line into memory-safe Parquet chunks (`chunk_*.parquet`) before being merged into a single DataFrame for processing.
+
+### Pipeline
+
+1. **Data ingestion** — Download the arXiv metadata snapshot from Kaggle and parse it into a DataFrame (`id`, `abstract`, `categories`, `year`), chunked to Parquet to avoid memory issues.
+2. **Abstract cleaning** — Lowercase text, expand/replace LaTeX symbols (`\alpha` → `alpha`, etc.), strip LaTeX equations, URLs, arXiv IDs, and emails, and normalize whitespace.
+3. **Embedding generation** — Encode cleaned abstracts with the Hugging Face `SentenceTransformer` model `BAAI/bge-small-en`.
+4. **Dimensionality reduction** — Reduce embeddings with `UMAP` (2D for visualization, 10D for clustering input).
+5. **Clustering** — Group similar abstracts using `HDBSCAN` (`min_cluster_size=100`, `min_samples=10`).
+6. **Topic representation** — Label each topic cluster using a combination of:
+   - `KeyBERTInspired`
+   - `MaximalMarginalRelevance`
+   - `GPT-4o-mini` (via the OpenAI API) for human-readable topic labels
+7. **Model assembly** — Combine all sub-models into a single `BERTopic` pipeline and fit it on the full document set.
+8. **Saving** — Persist both the embedding model and the trained BERTopic model (`safetensors` format) for reuse.
+9. **Visualization** — Generate interactive topic maps (Plotly scatter plots, bar charts) and a labelled document map via `datamapplot`.
+10. **Evaluation** — Report topic count, average documents per topic, and a topic diversity score (unique top words across topics).
+
+### Repository Structure
+
+```
+Arxiv-BERT-Topic-Modelling/
+└── Arxiv_BERT_Topic_Modelling_Full_code_100,000samples.ipynb
+```
+
+### Requirements
+
+The notebook relies on the following Python packages:
+
+```
 pandas
 numpy
 matplotlib
+plotly
 tqdm
+scikit-learn
+sentence-transformers
+umap-learn
+hdbscan
+bertopic
+datamapplot
+openai
+```
+
+Install them with:
+
+```bash
+pip install pandas numpy matplotlib plotly tqdm scikit-learn sentence-transformers umap-learn hdbscan bertopic datamapplot openai
+```
+
+The notebook was originally written for Google Colab (it uses `google.colab.files` and the Kaggle CLI download pattern); running locally just means skipping the Colab-specific upload cell.
+
+### Configuration
+
+This pipeline calls the OpenAI API (`gpt-4o-mini`) to generate human-readable topic labels, and the Kaggle API to download the dataset. Before running, set both as environment variables rather than hardcoding them in the notebook:
+
+```bash
+export OPENAI_API_KEY="your-key-here"
+export KAGGLE_USERNAME="your-username"
+export KAGGLE_KEY="your-kaggle-key"
+```
+
+Then in the notebook, load the key with `os.environ["OPENAI_API_KEY"]` instead of pasting it directly into the code.
+
+> **Note:** the current notebook has a live OpenAI API key hardcoded in the "GPT 4o mini Initialization" cell. Since this repo is public, that key is exposed — revoke/rotate it at [platform.openai.com](https://platform.openai.com/api-keys) and remove it from the notebook before your next commit.
+
+### How to Run
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/<your-username>/arxiv-bert-topic-modelling.git
+   cd arxiv-bert-topic-modelling
+   ```
+
+2. Install the dependencies listed above.
+
+3. Set your Kaggle and OpenAI credentials as environment variables (see **Configuration**).
+
+4. Launch Jupyter and open the notebook:
+
+   ```bash
+   jupyter notebook "Arxiv_BERT_Topic_Modelling_Full_code_100,000samples.ipynb"
+   ```
+
+5. Run all cells from top to bottom. The dataset download and full embedding/clustering pipeline can take a while given the dataset size (~2.8M abstracts) — consider subsampling `documents` for a faster local test run.
+
+### Results
+
+- **Papers processed:** ~2.8 million abstracts
+- **Unique arXiv categories:** 176
+- **Embedding model:** `BAAI/bge-small-en`
 
 
-How to Run
+### License
 
-Install required packages:
-pip install -r requirements
-
-IMPORTANT: Replace the OpenAI API key in the script:
-
-Locate this section in the code:
-pythonclient = openai.OpenAI(api_key="<PersonalOpenAIKey>")
-
-Replace <PersonalOpenAIKey> with your own OpenAI API key:
-pythonclient = openai.OpenAI(api_key="sk-xxxxxxxxxxxxxxxxxxxxxxxx")
-
-
-
-Run the main script:
-python Arxiv_BERT_Topic_Modelling_Full_code_100,000samples.ipynb
-
-For Google Colab:
-
-Upload the script to Colab and run all cells in order
-
-
-
-Project Files
-
-Arxiv_BERT_Topic_Modelling_Full_code_100,000samples.ipynb: Complete implementation code
-Arxiv_Abstracts_Data_Visualizations.ipynb: Visualization outputs and charts
-Arxiv_Abstracts_Datacleaning.ipynb: Data cleaning and preprocessing scripts
-arxiv_sampled_dataset.json: Sampled dataset for model training
-requirements.txt: List of required packages
-
-Data Processing
-
-The script automatically downloads the arXiv dataset from Kaggle
-Randomly samples 100,000 papers from the complete dataset
-Cleans abstracts by removing LaTeX symbols, equations, URLs, etc.
-Creates document embeddings using the SentenceTransformer model
-
-Model Components
-
-Uses UMAP for dimensionality reduction (n_neighbors=30, n_components=10)
-Applies HDBSCAN for clustering (min_cluster_size=100)
-Implements multiple topic representation models:
-
-KeyBERT and MMR for topic word extraction
-GPT-4o mini for generating descriptive topic labels
-
-
-
-Output Files
-
-Saved BERTopic model: my_topic_model_2.7
-Saved embedding model: my_embedding_model
-Topic visualization plot: plot_datamapplot.png
-
-Resource Requirements
-
-Processing 100,000 documents requires significant computational resources
-For memory issues and api rate limit, consider reducing the sample size in the code
+No license file is currently included in this repository. Consider adding one (e.g. MIT) if you intend for others to reuse this code.
