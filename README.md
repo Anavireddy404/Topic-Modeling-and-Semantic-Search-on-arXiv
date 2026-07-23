@@ -102,6 +102,3 @@ Then in the notebook, load the key with `os.environ["OPENAI_API_KEY"]` instead o
 - **Embedding model:** `BAAI/bge-small-en`
 
 
-### License
-
-No license file is currently included in this repository. Consider adding one (e.g. MIT) if you intend for others to reuse this code.
